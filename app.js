@@ -4,6 +4,7 @@ const cron = require('node-cron');
 const dotenv = require('dotenv');
 const logger = require('./logger');
 const res = require('express/lib/response');
+const pm2 = require('pm2');
 
 dotenv.config();
 
@@ -302,7 +303,7 @@ app.get('/', (req, res) => {
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-    fetchShopifyData();
+    // fetchShopifyData();
 });
 
 // New endpoint to start the cron job
@@ -324,6 +325,28 @@ app.get('/stop-cron', (req, res) => {
     } else {
         res.send('No cron job to stop');
     }
+});
+
+app.get('/restart-cron', (req, res) => {
+    const cronJobStopped = stopCronJob();
+    if (cronJobStopped) {
+        fetchShopifyData();
+        res.send('Cron job restarted');
+    } else {
+        res.send('No cron job to stop');
+    }
+});
+
+app.get('/restart', (req, res) => {
+    pm2.connect(() => {
+        pm2.restart('app.js', (err) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).send('Error restarting application');
+            }
+            res.send('Application restarted successfully');
+        });
+    });
 });
 
 function stopCronJob() {
